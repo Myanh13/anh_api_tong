@@ -1018,7 +1018,6 @@ app.post('/Register', (req, res) => {
         }
     });
 });
-
 //dung
 // app.post('/login', (req, res) => {
 //     const { email_user, pass_user } = req.body;
