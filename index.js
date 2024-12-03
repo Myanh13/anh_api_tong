@@ -27,6 +27,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 //////////////////////////////////////conect Da ta/////////////////////////////////
 
+
+
+
+
+
+
+
+
+
+
 app.get('/donhangchuacoc', (req, res) => {
     // Query JOIN 3 bảng để lấy thông tin đầy đủ, thêm id_DatHomestay
     let sql = `
@@ -724,7 +734,7 @@ const storage = multer.diskStorage({
       cb(null, uniqueSuffix + path.extname(file.originalname)); // Đặt tên file
     },
   });
-  const upload = multer({ storage }); // Tạo middleware Multer
+const upload = multer({ storage }); // Tạo middleware Multer
 // Endpoint xử lý tải ảnh đại diện
 app.post('/user/:id_user/avatar', upload.single('avatar'), (req, res) => {
     const userId = req.params.id_user;
@@ -1018,6 +1028,7 @@ app.post('/Register', (req, res) => {
         }
     });
 });
+
 //dung
 // app.post('/login', (req, res) => {
 //     const { email_user, pass_user } = req.body;
@@ -1365,22 +1376,20 @@ app.post('/reset-password', (req, res) => {
 
 // API lấy danh sách hình ảnh của homestay
 app.get('/admin/homestay', (req, res) => {
-    const id_homestay = req.params.id;
-
     const query = `
-    SELECT *
-    FROM homestay, hinh_homestay
-    WHERE homestay.id_homestay = hinh_homestay.id_homestay 
-    
+      SELECT homestay.*, hinh_homestay.url_hinh
+      FROM homestay
+      LEFT JOIN hinh_homestay ON homestay.id_homestay = hinh_homestay.id_homestay
     `;
-    db.query(query, [id_homestay], (err, results) => {
-        if (err) {
-            console.error('Error fetching images:', err);
-            return res.status(500).send('Server error');
-        }
-        res.json(results);
+  
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error('Error fetching data:', err);
+        return res.status(500).send('Server error');
+      }
+      res.json(results);
     });
-});
+  });
 
 // show loại homestay trong admin
 app.get('/admin/loai', function (req, res){
@@ -1428,46 +1437,32 @@ app.get('/admin/loai/:id', function (req, res) {
     })
 })
 
+// API để thêm homestay
 app.post('/admin/homestay', (req, res) => {
-    const { ten_homestay, gia_homestay, mota, danh_gia, TrangThai, id_Loai, url_hinh } = req.body;
-
-    if (!ten_homestay || !gia_homestay || !id_Loai || !url_hinh || typeof TrangThai === 'undefined') {
-        return res.status(400).send('Please provide all required fields: ten_homestay, gia_homestay, id_Loai, TrangThai, and url_hinh.');
+    const { ten_homestay, gia_homestay, mota, danh_gia, TrangThai, id_Loai } = req.body;
+  
+    // Kiểm tra dữ liệu đầu vào
+    if (!ten_homestay || !gia_homestay || !id_Loai) {
+      return res.status(400).json({ message: 'Thiếu dữ liệu cần thiết!' });
     }
-
-    // Thêm homestay vào bảng Homestay
-    const homestayQuery = `
-    INSERT INTO Homestay (ten_homestay, gia_homestay, mota, danh_gia, TrangThai, id_Loai)
-    VALUES (?, ?, ?, ?, ?, ?)
+  
+    // SQL query không bao gồm id_homestay
+    const query = `
+      INSERT INTO homestay (ten_homestay, gia_homestay, mota, danh_gia, TrangThai, id_Loai) 
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
-
-    db.query(homestayQuery, [ten_homestay, gia_homestay, mota, danh_gia || "Chưa đánh giá", TrangThai, id_Loai], (err, result) => {
-        if (err) {
-            console.error('Error adding new homestay:', err);
-            return res.status(500).send('Server error');
-        }
-
-        const homestayId = result.insertId;
-
-        // Thêm hình ảnh vào bảng hinh_homestay cho homestay vừa tạo
-        const imageQuery = `
-        INSERT INTO hinh_homestay (id_homestay, url_hinh)
-        VALUES (?, ?)
-        `;
-
-        db.query(imageQuery, [homestayId, url_hinh], (err) => {
-            if (err) {
-                console.error('Error adding image:', err);
-                return res.status(500).send('Server error while adding image');
-            }
-
-            res.json({
-                message: 'Homestay đã được thêm thành công'
-            });
-        });
+  
+    const danh_gia_value = danh_gia ?? 0; // Giá trị mặc định cho đánh giá
+  
+    db.query(query, [ten_homestay, gia_homestay, mota, danh_gia_value, TrangThai, id_Loai], (err, result) => {
+      if (err) {
+        console.error('Lỗi khi thêm dữ liệu:', err);
+        return res.status(500).json({ message: 'Lỗi khi thêm dữ liệu' });
+      }
+  
+      res.status(201).json({ message: 'Thêm homestay thành công!', id: result.insertId });
     });
 });
-
 app.put('/admin/homestay/:id', (req, res) => {
     const { id } = req.params;
     const { ten_homestay, gia_homestay, mota, danh_gia, TrangThai, id_Loai, url_hinh } = req.body;
