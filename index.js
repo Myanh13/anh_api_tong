@@ -1003,15 +1003,21 @@ app.delete('/danhgia/:id', (req, res) => {
 
 // Đăng ký, Đăng nhập
 app.post('/Register', (req, res) => {
-    let data = req.body;
-    let sql = `INSERT INTO users SET ?`;
-    db.query(sql, data, (err, data) => {
-        if (err) res.json({ "thongbao": "Tài khoản đã tồn tại", err })
-        else {
-            res.json({ "thongbao": "Tạo tài khoản thành công", data });
+    let { ten_user, sdt_user, pass_user, email_user } = req.body; // Chỉ nhận các trường cần thiết
+    let sql = `
+        INSERT INTO users (ten_user, sdt_user, pass_user, email_user, role_id)
+        VALUES (?,?, ?, ?, 2)
+    `;
+
+    db.query(sql, [ten_user,sdt_user, pass_user, email_user], (err, result) => {
+        if (err) {
+            console.error("Error:", err);
+            return res.status(400).json({ thongbao: "Tài khoản đã tồn tại", err });
+        } else {
+            res.json({ thongbao: "Tạo tài khoản thành công", result });
         }
     });
-})
+});
 
 //dung
 // app.post('/login', (req, res) => {
